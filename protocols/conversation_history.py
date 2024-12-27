@@ -20,7 +20,7 @@ class ConversationHistory:
         - content: The message content
         """
         self.history.append({"role": role, "content": content})
-        print(f"Updated conversation history: {self.history}")  # Debugging
+        print(f"The conversation history was updated.")  # Debugging
 
 
     def get_recent(self, n=5):
