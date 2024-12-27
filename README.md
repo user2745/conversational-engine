@@ -44,7 +44,8 @@ This module powers conversational interactions, supporting queries, context-base
 
 ### Prerequisites
 - Python 3.8 or higher
-- API keys for OpenAI and Ollama (if applicable)
+- API keys for OpenAI
+- Ollama server on localhost
 
 ### Installation
 1. Clone this repository:
