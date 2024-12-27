@@ -1,22 +1,60 @@
-# engine/core_engine.py
-from modules.data_ingestion import fetch_data
-from modules.processing import process_data
-from modules.logging import log_data
+from protocols.conversation_history import ConversationHistory
+from modules.openai import query_openai
+from modules.ollama import query_ollama
+import os
+
 
 class CoreEngine:
-    def __init__(self, fetch_endpoint, process_endpoint, log_endpoint):
-        self.fetch_endpoint = fetch_endpoint
-        self.process_endpoint = process_endpoint
-        self.log_endpoint = log_endpoint
+    def __init__(self, max_history_length=50):
+        # Initialize conversation history
+        self.conversation = ConversationHistory(max_length=max_history_length)
 
-    def run(self):
-        # Step 1: Fetch data
-        raw_data = fetch_data(self.fetch_endpoint)
-        print(f"Fetched Data: {raw_data}")
+    def process_query(self, query, engine_preference=None):
+        """
+        Process a query using either OpenAI, Ollama, or both engines.
+        """
+        try:
+            # Step 1: Add user query to the history
+            self.conversation.add_exchange("user", query)
 
-        # Step 2: Process data
-        processed_data = process_data(raw_data["data"])
-        print(f"Processed Data: {processed_data}")
+            # Step 2: Decide which engine(s) to use
+            if engine_preference == "openai":
+                response = query_openai(query)
+            elif engine_preference == "ollama":
+                response = query_ollama(query)
+            else:
+                # Default: Use both engines and merge responses
+                response_openai = query_openai(query)
+                response_ollama = query_ollama(query)
+                response = self.merge_responses(response_openai, response_ollama)
 
-        # Step 3: Log data
-        log_data(processed_data)
+            # Step 3: Add assistant response to the history
+            self.conversation.add_exchange("assistant", response)
+
+            # Step 4: Return the response
+            return response
+        except Exception as e:
+            return f"Core Engine Error: {e}"
+
+    @staticmethod
+    def merge_responses(openai_response, ollama_response):
+        """
+        Combine responses from OpenAI and Ollama into a single enhanced output.
+        """
+        if openai_response == ollama_response:
+            return openai_response
+        return f"{openai_response} Additionally, Ollama noted: {ollama_response}"
+
+    def save_history(self, file_path):
+        """
+        Save conversation history to a file.
+        """
+        self.conversation.save_to_file(file_path)
+
+    def load_history(self, file_path):
+        """
+        Load conversation history from a file.
+        """
+        if os.path.exists(file_path):
+            self.conversation.load_from_file(file_path)
+            print("Loaded previous conversation history.")
